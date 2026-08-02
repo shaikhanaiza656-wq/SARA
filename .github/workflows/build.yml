@@ -1,0 +1,53 @@
+name: Build APK
+
+# Builds a debug APK on every push/PR to main, and on manual trigger.
+# NOTE: This repo does not have a committed Gradle wrapper (gradlew /
+# gradlew.bat / gradle-wrapper.jar) yet -- only gradle-wrapper.properties.
+# Until that's added, this workflow installs Gradle directly via the
+# official gradle/actions/setup-gradle action instead of calling ./gradlew.
+# If you later run `gradle wrapper` locally and commit the wrapper files,
+# switch the build step below from `gradle` to `./gradlew`.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.7'
+
+      # No secrets needed to build — the wake word engine (Vosk) requires
+      # no API key. It DOES need the model files committed under
+      # app/src/main/assets/model-en-us/ (see that folder's README) or the
+      # APK will build but the wake word engine will fail at runtime.
+
+      - name: Build debug APK
+        run: gradle :app:assembleDebug --stacktrace
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: termuxai-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error

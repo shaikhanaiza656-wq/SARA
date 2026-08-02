@@ -1,0 +1,46 @@
+name: Generate Gradle Wrapper
+
+# One-time, manually-triggered job. Uses GitHub's real network + a real
+# Gradle install (via gradle/actions/setup-gradle) to generate the genuine
+# gradlew / gradlew.bat / gradle-wrapper.jar files, then commits them back
+# to the repo. This exists because a real gradle-wrapper.jar is a compiled
+# binary that cannot be hand-written -- it has to come from an actual
+# Gradle installation with network access, which this sandbox doesn't have.
+#
+# Run this once (Actions tab -> Generate Gradle Wrapper -> Run workflow),
+# then you can delete this workflow file if you want -- it's not needed
+# after the wrapper is committed.
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  generate-wrapper:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.7'
+
+      - name: Generate real wrapper files
+        run: gradle wrapper --gradle-version 8.7 --distribution-type all
+
+      - name: Commit wrapper files
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Add real Gradle wrapper (gradlew, gradlew.bat, gradle-wrapper.jar)"
+          file_pattern: "gradlew gradlew.bat gradle/wrapper/gradle-wrapper.jar gradle/wrapper/gradle-wrapper.properties"
